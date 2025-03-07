@@ -1,8 +1,11 @@
 #!/bin/bash
 echo "🚀 Initializing Airflow..."
 
+# Source environment variables
+source /path/to/.env
+
 # Wait for PostgreSQL to be ready
-until pg_isready -h $AIRFLOW_DB_HOST -p 5432 -U $AIRFLOW_DB_USER; do
+until pg_isready -h airflow_postgres -p 5432 -U $AIRFLOW_POSTGRES_USER; do
   sleep 5
 done
 

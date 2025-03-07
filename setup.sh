@@ -2,6 +2,24 @@
 
 clear
 
+# Function to handle errors and run terraform destroy
+handle_error() {
+    echo "❌ An error occurred. Destroying Terraform resources..."
+    cd terraform || { echo "❌ Terraform folder not found! Exiting..."; exit 1; }
+    if [ -d ".terraform" ]; then
+        terraform destroy -var="project_id=$GCP_PROJECT_ID" -auto-approve
+    else
+        echo "⚠️ Terraform has not been initialized. Skipping destroy."
+    fi
+    cd ..
+    docker-compose down -v
+    echo "✅ Cleanup complete."
+    exit 1
+}
+
+# Set trap to catch errors and run handle_error function
+trap 'handle_error' ERR
+
 # 1️⃣ Greeting
 echo "🚀 Welcome to the Automated ETL Setup!"
 echo "This script will set up your environment, deploy the infrastructure, and run your ETL pipeline."
@@ -12,40 +30,34 @@ echo "🔹 Creating and writing to .env file..."
 # Remove existing .env to start fresh
 rm -f .env
 
-# General Airflow Settings
-echo "AIRFLOW_POSTGRES_USER=airflow" >> .env
-echo "AIRFLOW_POSTGRES_PASSWORD=airflow" >> .env
-echo "AIRFLOW_DB=airflow" >> .env
-echo "AIRFLOW_ADMIN_USER=admin" >> .env
-echo "AIRFLOW_ADMIN_PASSWORD=admin" >> .env
-echo "AIRFLOW_ADMIN_EMAIL=admin@example.com" >> .env
+# Create & Write Environment
+cat > .env <<EOL
+AIRFLOW_POSTGRES_USER=airflow
+AIRFLOW_POSTGRES_PASSWORD=airflow
+AIRFLOW_DB=airflow
+AIRFLOW_ADMIN_USER=admin
+AIRFLOW_ADMIN_PASSWORD=admin
+AIRFLOW_ADMIN_EMAIL=admin@example.com
+AIRFLOW_DB_HOST=airflow_postgres
 
-# TfL API Configuration
-echo "TFL_API_URL=https://api.tfl.gov.uk/AccidentStats" >> .env
-echo "START_YEAR=2005" >> .env
-echo "END_YEAR=2019" >> .env
+TFL_API_URL=https://api.tfl.gov.uk/AccidentStats
+START_YEAR=2005
+END_YEAR=2019
 
-# PostgreSQL Configuration (Hardcoded for Local Use)
-echo "USE_CLOUD_DB=False" >> .env
-echo "DB_HOST=postgres_db_tfl_accident_data" >> .env
-echo "DB_PORT=5432" >> .env
-echo "DB_NAME=tfl_accidents" >> .env
-echo "DB_USER=admin" >> .env
-echo "DB_PASSWORD=admin" >> .env
+USE_CLOUD_DB=False
+DB_HOST=postgres_db_tfl_accident_data
+DB_PORT=5432
+DB_NAME=tfl_accidents
+DB_USER=admin
+DB_PASSWORD=admin
 
-# PostgreSQL Configuration (For Local Database)
-echo "POSTGRES_USER=postgres" >> .env
-echo "POSTGRES_PASSWORD=postgres" >> .env
-echo "POSTGRES_DB=tfl_accidents" >> .env
+GCS_CSV_PATH=processed_data/raw/csv/
+DBT_PROFILES_DIR=/usr/app/dbt
+DBT_PROJECT_NAME=tfl_accidents_project
 
+LOCAL_STORAGE=/opt/airflow/processed_data/raw/csv
 
-# Kaggle Dataset for Weather Data
-echo "KAGGLE_DATASET=zongaobian/london-weather-data-from-1979-to-2023" >> .env
-echo "GCS_CSV_PATH=processed_data/raw/csv/" >> .env
-
-# dbt Configuration
-echo "DBT_PROFILES_DIR=/usr/app/dbt" >> .env
-echo "DBT_PROJECT_NAME=tfl_accidents_project" >> .env
+EOL
 
 echo "✅ .env file created successfully."
 
@@ -60,13 +72,13 @@ if ! command -v gcloud &> /dev/null; then
   echo "🔸 Installing Google Cloud SDK..."
   curl -sSL https://sdk.cloud.google.com | bash
   exec -l $SHELL
-  gcloud components install gke-gcloud-auth-plugin
+  gcloud components install gke-gcloud-auth-plugin --quiet
 fi
 
 # Install Docker if not installed
 if ! command -v docker &> /dev/null; then
   echo "🔸 Installing Docker..."
-  sudo apt update && sudo apt install -y docker.io
+  sudo apt update -y && sudo apt install -y docker.io
   sudo systemctl enable --now docker
 fi
 
@@ -140,79 +152,51 @@ BILLING_STATUS=$(gcloud beta billing projects describe $GCP_PROJECT_ID --format=
 
 if [ "$BILLING_STATUS" != "True" ]; then
   echo "❌ Billing is not enabled for this project!"
-  echo "To proceed, you must enable billing."
+  echo "To proceed, you must enable billing manually."
 
   # Show available billing accounts
   echo "🔹 Available billing accounts:"
   gcloud beta billing accounts list
 
-  # Check if the user has permission to enable billing
-  echo "🔹 Checking your billing permissions..."
-  PERMISSION_CHECK=$(gcloud projects get-iam-policy $GCP_PROJECT_ID --flatten="bindings[].members" --format="value(bindings.role)" | grep "roles/billing.user")
+  echo "🔹 Follow these steps to enable billing:"
+  echo "   1️⃣ Go to the Billing Console: https://console.cloud.google.com/billing"
+  echo "   2️⃣ Select or link a billing account to your project: $GCP_PROJECT_ID"
+  echo "   3️⃣ Once billing is activated, re-run this script."
 
-  if [ -z "$PERMISSION_CHECK" ]; then
-    echo "❌ You do NOT have permission to enable billing!"
-    echo "🔹 Attempting to grant you the 'Billing User' role..."
-    
-    # Try to grant the user billing user role
-    gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-        --member="user:$USER_EMAIL" \
-        --role="roles/billing.user"
-
-    # Re-check permission after attempting to grant
-    PERMISSION_CHECK=$(gcloud projects get-iam-policy $GCP_PROJECT_ID --flatten="bindings[].members" --format="value(bindings.role)" | grep "roles/billing.user")
-
-    if [ -z "$PERMISSION_CHECK" ]; then
-      echo "❌ Failed to grant 'Billing User' role. You must manually enable billing in the Google Cloud Console."
-      echo "🔹 Follow these steps:"
-      echo "   1️⃣ Go to the Billing Console: https://console.cloud.google.com/billing"
-      echo "   2️⃣ Select or link a billing account to your project: $GCP_PROJECT_ID"
-      echo "   3️⃣ Once billing is activated, re-run this script."
-      exit 1
-    else
-      echo "✅ 'Billing User' role granted successfully!"
-    fi
-  fi
-
-  # Prompt the user to link a billing account
-  read -p "Enter your Billing Account ID to link with this project: " BILLING_ACCOUNT_ID
-  echo "🔹 Linking project to billing account..."
-  
-  gcloud beta billing projects link $GCP_PROJECT_ID --billing-account=$BILLING_ACCOUNT_ID
-
-  # Verify if billing is enabled
-  BILLING_STATUS=$(gcloud beta billing projects describe $GCP_PROJECT_ID --format="value(billingEnabled)")
-  if [ "$BILLING_STATUS" != "True" ]; then
-    echo "❌ Billing activation failed. Please check your GCP console and try again."
-    exit 1
-  else
-    echo "✅ Billing enabled successfully!"
-  fi
-else
-  echo "✅ Billing is already enabled."
+  exit 1
 fi
 
+echo "✅ Billing is already enabled."
+
+#FIXME: NEED TO ADD A WAIT HERE TO ENSURE PERMISSIONS ARE SET BEFORE PROCEEDING
+
 # Update Application Default Credentials quota project
-gcloud auth application-default set-quota-project $GCP_PROJECT_ID
+echo "🔹 Granting 'serviceusage.services.use' permission to the authenticated user..."
+gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
+    --member="user:$USER_EMAIL" \
+    --role="roles/serviceusage.serviceUsageConsumer"
 
-# 5️⃣ Deploy Infrastructure
-echo "🔹 Initializing Terraform..."
-cd terraform || { echo "❌ Terraform folder not found! Exiting..."; exit 1; }
-terraform init || { echo "❌ Terraform initialization failed! Exiting..."; exit 1; }
 
-echo "🔹 Applying Terraform configuration..."
-terraform apply -var="project_id=$GCP_PROJECT_ID" -var="gcs_location=us-central1" -auto-approve || { echo "❌ Terraform failed! Exiting..."; exit 1; }
+# Verify the permission was granted
+PERMISSION_CHECK=$(gcloud projects get-iam-policy $GCP_PROJECT_ID --flatten="bindings[].members" --format="value(bindings.role)" | grep "roles/serviceusage.serviceUsageConsumer")
 
-# 5.1 Fetch Data Lake Bucket Name
-DATALAKE_BUCKET_NAME=$(terraform output -raw datalake_bucket_name)
+if [ -z "$PERMISSION_CHECK" ]; then
+    echo "❌ Failed to grant 'serviceusage.services.use' permission. Exiting..."
+    exit 1
+fi
 
-# Store bucket name in .env
-sed -i "s|GCS_RAW_BUCKET_NAME=.*|GCS_RAW_BUCKET_NAME=$DATALAKE_BUCKET_NAME|g" ../.env
+# Retry setting the Application Default Credentials quota project
+echo "🔹 Setting Application Default Credentials quota project..."
+if ! gcloud auth application-default set-quota-project $GCP_PROJECT_ID; then
+    echo "⚠️ Warning: Failed to set quota project. Please ensure the authenticated user has the 'serviceusage.services.use' permission."
+fi
 
-echo "✅ GCS Data Lake created: gs://$DATALAKE_BUCKET_NAME"
-cd ..
+#FIXME: NEED TO ADD A WAIT HERE TO ENSURE PERMISSIONS ARE SET BEFORE PROCEEDING
+echo "⏳ Waiting for permissions to propagate..."
+sleep 10  # Wait for 60 seconds to ensure permissions are set
 
-# 6️⃣ Create a Dedicated Storage Admin Service Account
+#NOTE: Create a Dedicated Storage Admin Service Account
+# 5 Create a Dedicated Storage Admin Service Account
 
 STORAGE_ADMIN_NAME="storage-admin"
 STORAGE_ADMIN_EMAIL="$STORAGE_ADMIN_NAME@$GCP_PROJECT_ID.iam.gserviceaccount.com"
@@ -228,28 +212,39 @@ if [ -n "$EXISTING_SA" ]; then
     EXISTING_KEYS=$(gcloud iam service-accounts keys list --iam-account=$STORAGE_ADMIN_EMAIL --format="value(name)")
     
     if [ -n "$EXISTING_KEYS" ]; then
-        for KEY in $EXISTING_KEYS; do
-            gcloud iam service-accounts keys delete $KEY --iam-account=$STORAGE_ADMIN_EMAIL --quiet
-            echo "✅ Deleted key: $KEY"
-        done
+    for KEY in $EXISTING_KEYS; do
+        gcloud iam service-accounts keys delete $KEY --iam-account=$STORAGE_ADMIN_EMAIL --quiet || {
+            echo "⚠️ Warning: Failed to delete key $KEY. It might have already been deleted or precondition check failed."
+        }
+        echo "✅ Deleted key: $KEY"
+    done
     fi
     
     # Delete the service account
-    gcloud iam service-accounts delete $STORAGE_ADMIN_EMAIL --quiet
+    gcloud iam service-accounts delete $STORAGE_ADMIN_EMAIL --quiet || {
+        echo "⚠️ Warning: Failed to delete service account $STORAGE_ADMIN_EMAIL. It might have already been deleted or precondition check failed."
+    }
     echo "✅ Deleted service account: $STORAGE_ADMIN_EMAIL"
 
-    # 🔹 Wait for deletion to complete
     echo "⏳ Waiting for GCP to fully remove the service account..."
     while gcloud iam service-accounts list --format="value(email)" --filter="email:$STORAGE_ADMIN_EMAIL" | grep -q "$STORAGE_ADMIN_EMAIL"; do
-        echo "🔄 Still deleting... waiting 5 seconds..."
-        sleep 5
+        echo "🔄 Still deleting... waiting 10 seconds..."
+        sleep 10
     done
     echo "✅ Service account fully removed."
+
+    # 🛠 ADD A NEW WAIT TO AVOID IMMEDIATE RE-CREATION
+    echo "⏳ Giving Google Cloud some extra time before creating a new service account..."
+    sleep 30  # Wait an additional 30 seconds before proceeding
+
 fi
 
 # 6.1 Create a New Storage Admin Service Account
 echo "🔹 Creating new Storage Admin service account: $STORAGE_ADMIN_NAME..."
 gcloud iam service-accounts create $STORAGE_ADMIN_NAME --display-name "Storage Admin Service Account"
+
+# Add a delay before checking the service account to avoid the warning
+sleep 10
 
 # Verify the account was created before proceeding
 NEW_SA=$(gcloud iam service-accounts list --format="value(email)" --filter="email:$STORAGE_ADMIN_EMAIL")
@@ -287,20 +282,28 @@ done
 
 echo "✅ IAM permissions successfully assigned!"
 
+# NOTE: Check any permissions errors 
 # 6.3 Generate a New Service Account Key for the Storage Admin
 echo "🔹 Generating a new service account key for Storage Admin..."
-#remove existing key
-rm -f $KEY_FILE_PATH
+
+# Remove existing key file if it exists
+if [ -f "$KEY_FILE_PATH" ]; then
+    rm -f $KEY_FILE_PATH
+fi
+
+# Ensure the secrets directory exists and has the correct permissions
 mkdir -p secrets
 chmod 755 secrets  # Ensure directory is accessible
 
+KEY_FILE_PATH="secrets/gcp_credentials.json"
+
 gcloud iam service-accounts keys create $KEY_FILE_PATH --iam-account=$STORAGE_ADMIN_EMAIL
 
-# ✅ Ensure the key has the correct permissions
+# Ensure the key has the correct permissions
 chmod 644 $KEY_FILE_PATH  # Make it readable by all users but writable only by the owner
-chown 1000:1000 $KEY_FILE_PATH  # Ensure the correct user owns it
+chown $(id -u):$(id -g) $KEY_FILE_PATH  # Ensure the correct user owns it
 
-# ✅ Ensure the key is accessible inside the container
+# Ensure the key is accessible inside the container
 docker exec -it airflow-webserver chmod 644 /opt/airflow/keys/gcp_credentials.json 2>/dev/null || true
 docker exec -it airflow-webserver chown airflow:airflow /opt/airflow/keys/gcp_credentials.json 2>/dev/null || true
 
@@ -323,9 +326,47 @@ echo "✅ Using bucket: $GCS_BUCKET"
 
 echo "LOCAL_STORAGE=/opt/airflow/processed_data/raw/csv" >> .env
 
+#NOTE: Deploy Infrastructure
+
+# 5️⃣ Deploy Infrastructure
+echo "🔹 Initializing Terraform..."
+cd terraform || { echo "❌ Terraform folder not found! Exiting..."; exit 1; }
+terraform init || { echo "❌ Terraform initialization failed! Exiting..."; exit 1; }
+
+# Check if the user has the required permissions to create storage buckets
+echo "🔹 Checking permissions for creating storage buckets..."
+if ! gcloud projects get-iam-policy $GCP_PROJECT_ID --flatten="bindings[].members" --format="value(bindings.role)" | grep -q "roles/storage.admin"; then
+    echo "❌ ERROR: The authenticated user does not have 'roles/storage.admin' permission. Please grant the required permissions and re-run the script."
+    exit 1
+fi
+
+echo "🔹 Applying Terraform configuration..."
+if ! terraform apply -var="project_id=$GCP_PROJECT_ID" -var="gcs_location=us-central1" -auto-approve; then
+    echo "⚠️ Warning: Terraform failed to create the bucket. Checking if the bucket already exists..."
+    if gsutil ls -b "gs://${GCP_PROJECT_ID}-datalake" &>/dev/null; then
+        echo "✅ Bucket already exists: gs://${GCP_PROJECT_ID}-datalake"
+        DATALAKE_BUCKET_NAME="${GCP_PROJECT_ID}-datalake"
+    else
+        echo "❌ Terraform failed and the bucket does not exist. Exiting..."
+        exit 1
+    fi
+else
+    # Fetch Data Lake Bucket Name
+    DATALAKE_BUCKET_NAME=$(terraform output -raw datalake_bucket_name)
+fi
+
+# Store bucket name in .env
+sed -i "s|GCS_RAW_BUCKET_NAME=.*|GCS_RAW_BUCKET_NAME=$DATALAKE_BUCKET_NAME|g" ../.env
+
+echo "✅ GCS Data Lake created: gs://$DATALAKE_BUCKET_NAME"
+cd ..
+
+#TODO: needs to to be changed   to docker-compose up -d but with some logs
+
+
 # 6️⃣ Start Docker Containers
 echo "🔹 Starting Docker services..."
-docker-compose up
+docker-compose up --build -d
 
 # 7️⃣ Wait for Airflow Webserver
 echo "⏳ Waiting for Airflow to initialize..."
@@ -341,9 +382,10 @@ fi
 
 # 9️⃣ Unpause & Trigger DAG
 echo "🔹 Unpausing and triggering Airflow DAG..."
-docker exec -it airflow_webserver airflow dags unpause end_to_end_pipeline
-docker exec -it airflow_webserver airflow dags trigger end_to_end_pipeline
+docker exec -it airflow-webserver airflow dags unpause end_to_end_pipeline
+docker exec -it airflow-webserver airflow dags trigger end_to_end_pipeline
 
+NOTE: check port 8082 for Airflow and 8501 for Streamlit
 # 🔟 Display URLs
 AIRFLOW_DASHBOARD_URL="http://localhost:8082"
 STREAMLIT_DASHBOARD_URL="http://localhost:8501"

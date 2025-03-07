@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime, timedelta
 import subprocess
 import logging
@@ -16,8 +17,8 @@ logging.basicConfig(
 # Default arguments
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime(2024, 2, 27),
-    'catchup': False,
+    'depends_on_past': False,
+    'start_date': datetime(2023, 1, 1),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
@@ -27,9 +28,12 @@ with DAG(
     'end_to_end_pipeline',
     default_args=default_args,
     description='ETL + dbt in a single end-to-end pipeline',
-    schedule_interval=None,
+    schedule_interval='@daily',
     max_active_runs=1,
 ) as dag:
+
+    start = DummyOperator(task_id='start')
+    end = DummyOperator(task_id='end')
 
     # Function to run Python scripts
     def run_script(script_name):
@@ -81,4 +85,4 @@ with DAG(
     )
 
     # Task dependencies
-    [accident_data_task, weather_task] >> dbt_run
+    start >> [accident_data_task, weather_task] >> dbt_run >> end
