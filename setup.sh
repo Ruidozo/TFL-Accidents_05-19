@@ -2,20 +2,6 @@
 
 clear
 
-# Function to handle errors and run terraform destroy
-handle_error() {
-    echo "❌ An error occurred. Destroying Terraform resources..."
-    cd terraform || { echo "❌ Terraform folder not found! Exiting..."; exit 1; }
-    if [ -d ".terraform" ]; then
-        terraform destroy -var="project_id=$GCP_PROJECT_ID" -auto-approve
-    else
-        echo "⚠️ Terraform has not been initialized. Skipping destroy."
-    fi
-    cd ..
-    docker-compose down -v
-    echo "✅ Cleanup complete."
-    exit 1
-}
 
 # Set trap to catch errors and run handle_error function
 trap 'handle_error' ERR
