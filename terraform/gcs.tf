@@ -1,6 +1,7 @@
 resource "google_storage_bucket" "datalake" {
   name          = "${var.project_id}-datalake"
   location      = var.gcs_location
+  force_destroy = true
   storage_class = "STANDARD"
 
   uniform_bucket_level_access = true
