@@ -1,0 +1,12 @@
+name: "tfl_accidents_project"
+version: "1.0"
+config-version: 2
+
+profile: "tfl_accidents_project"
+
+models:
+  tfl_accidents_project:
+    staging:
+      +materialized: view
+    core:
+      +materialized: table

@@ -1,0 +1,61 @@
+version: 2
+
+sources:
+
+  - name: tfl_data
+    database: "{{ env_var('DB_NAME') }}"  # Ensures it works with different environments
+    schema: public
+    tables:
+      - name: stg_tfl_accidents
+        description: "Staging table for TFL accidents data."
+      - name: accidents
+        description: "Raw accident data from TFL."
+
+models:  
+
+  - name: stg_accidents
+    description: "Staging model for accidents data from TFL."
+  
+  - name: stg_casualties
+    description: "Staging model for casualties data from TFL."
+    columns:
+      - name: accident_id
+        description: "Original accident ID from source data."
+      - name: age
+        description: "Age of the casualty."
+      - name: mode
+        description: "Mode of transport of the casualty."
+      - name: class
+        description: "Class of the casualty (e.g., passenger, driver)."
+      - name: age_band
+        description: "Age band of the casualty."
+      - name: severity
+        description: "Severity of the casualty."
+  
+  - name: stg_vehicles
+    description: "Staging model for vehicles extracted from accident data."
+    columns:
+      - name: unique_accident_id
+        description: "A unique accident ID across years."
+      - name: accident_id
+        description: "Original accident ID from source data."
+      - name: vehicle_type
+        description: "The type of vehicle involved in the accident."
+  
+  - name: stg_accidents_clean
+    description: "Staging model for accidents excluding casualties and vehicles."
+    columns:
+      - name: unique_accident_id
+        description: "A unique accident ID across years."
+      - name: accident_id
+        description: "Original accident ID from source data."
+      - name: date
+        description: "Accident occurrence date."
+      - name: longitude
+        description: "Longitude coordinate of the accident."
+      - name: latitude
+        description: "Latitude coordinate of the accident."
+      - name: borough
+        description: "The borough where the accident occurred."
+      - name: accident_severity
+        description: "Severity level of the accident."

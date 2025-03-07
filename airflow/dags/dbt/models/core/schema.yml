@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: accidents
+    description: "Core model for cleaned accident data."
+    columns:
+      - name: accident_id
+        description: "Primary key for accidents."
+        tests:
+          - unique  # Ensures no duplicate accidents
+          - not_null  # Ensures no missing accident_id
+      - name: accident_date
+        description: "Date of the accident."
+      - name: borough
+        description: "Borough where the accident happened."
+      - name: accident_severity
+        description: "Severity of the accident."
+
+  - name: casualties
+    description: "Core model for casualties linked to accidents."
+    columns:
+      - name: accident_id
+        description: "Foreign key linking to accidents."
+        tests:
+          - relationships:
+              to: ref('accidents')
+              field: accident_id
+      - name: casualty_id
+        description: "Unique casualty ID."
+      - name: casualty_severity
+        description: "Severity of the casualty."
+
+  - name: vehicles
+    description: "Core model for vehicles linked to accidents."
+    columns:
+      - name: accident_id
+        description: "Foreign key linking to accidents."
+      - name: vehicle_type
+        description: "Type of vehicle involved in the accident."
+
+  - name: accident_summary
+    description: "Core model summarizing accidents with vehicle and casualty counts."
+    columns:
+      - name: accident_id
+        description: "Unique accident identifier."
+        tests:
+          - unique
+          - not_null
+      - name: accident_date
+        description: "Date of the accident."
+      - name: borough
+        description: "Location of the accident."
+      - name: accident_severity
+        description: "Severity level of the accident."
+      - name: vehicle_count
+        description: "Number of vehicles involved in the accident."
+      - name: casualty_count
+        description: "Number of casualties in the accident."

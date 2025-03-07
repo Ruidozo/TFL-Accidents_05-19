@@ -1,0 +1,14 @@
+dlt
+google-cloud-storage
+pyyaml
+requests
+pandas
+apache-airflow-providers-google
+apache-airflow-providers-amazon
+apache-airflow-providers-postgres
+dbt-core
+dbt-postgres
+streamlit
+psycopg2-binary
+folium
+streamlit_folium

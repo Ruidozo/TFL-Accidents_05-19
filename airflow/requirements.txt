@@ -1,0 +1,13 @@
+apache-airflow-providers-google
+apache-airflow-providers-postgres
+dbt-core
+dbt-postgres
+psycopg2-binary
+dbt-extractor     
+dlt
+google-cloud-storage
+pyyaml
+requests
+pandas
+python-dotenv
+kagglehub

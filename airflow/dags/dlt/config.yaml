@@ -1,0 +1,7 @@
+tfl_api_url: "https://api.tfl.gov.uk/AccidentStats"
+# adds the gcs data bucket from the .env file
+gcs_bucket: ${GCS_BUCKET}
+start_year: 2005
+end_year: 2019
+local_storage: "processed_data"
+bucket_url: "processed_data"  # ✅ Added bucket_url matching local_storage

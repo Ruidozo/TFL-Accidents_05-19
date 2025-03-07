@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+matplotlib
+plotly
+psycopg2-binary
+python-dotenv
+sqlalchemy
+folium
+streamlit_folium
