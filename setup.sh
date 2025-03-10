@@ -321,9 +321,18 @@ if [ ! -f .env ]; then
 fi
 
 echo "🔹 Ensuring DAGs folder exists before running Docker Compose..."
-mkdir -p /opt/airflow/dags || { echo "❌ Failed to create DAGs folder!"; exit 1; }
-cp -r /app/tfl-accidents/airflow/dags/* /opt/airflow/dags/ || { echo "❌ Failed to copy DAGs!"; exit 1; }
+
+# Check if the DAGs folder exists
+if [ ! -d /opt/airflow/dags ]; then
+    echo "⚠️ DAGs folder not found in /opt/airflow/dags. Creating it..."
+    mkdir -p /opt/airflow/dags || { echo "❌ Failed to create DAGs folder! Exiting..."; exit 1; }
+
+    echo "🔹 Copying DAGs from the container version..."
+    cp -r /app/tfl-accidents/airflow/dags/* /opt/airflow/dags/ || { echo "❌ Failed to copy DAGs! Exiting..."; exit 1; }
+else
+    echo "✅ DAGs folder already exists."
 fi
+
 
 
 # 6️⃣ Start Docker & Airflow
