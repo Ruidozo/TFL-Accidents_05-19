@@ -31,7 +31,6 @@ services:
       - postgres_db_data:/var/lib/postgresql/data
       - ./db_init.sh:/docker-entrypoint-initdb.d/db_init.sh
       - airflow_env:/usr/app/.env  # ✅ Ensures .env works
-      - ./.env:/.env
 
   # Airflow Webserver
   airflow-webserver:
@@ -97,7 +96,6 @@ services:
     volumes:
       - ./dashboard:/usr/app/dashboard
       - ./.env:/usr/app/.env
-      - airflow_env:/usr/app/.env  # ✅ Ensures .env works
     working_dir: /usr/app/dashboard
     command: ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
