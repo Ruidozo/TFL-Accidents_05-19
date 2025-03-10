@@ -52,8 +52,8 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ./airflow/dags/dbt:/usr/app/dbt  # Mounts dbt into Airflow container
-      - ./airflow/dags/dlt:/usr/app/dlt  # Mounts dlt into Airflow container
+      - ./airflow/dags/dbt:/usr/app/dbt  
+      - ./airflow/dags/dlt:/usr/app/dlt  
       - ./secrets/gcp_credentials.json:/opt/airflow/keys/gcp_credentials.json:ro
       - ./airflow/dags/dbt/logs:/usr/app/dbt/logs
     command: ["airflow", "webserver"]
@@ -76,8 +76,8 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ./airflow/dags/dbt:/usr/app/dbt  # Mounts dbt into Airflow container
-      - ./airflow/dags/dlt:/usr/app/dlt  # Mounts dlt into Airflow container
+      - ./airflow/dags/dbt:/usr/app/dbt  
+      - ./airflow/dags/dlt:/usr/app/dlt  
       - ./secrets/gcp_credentials.json:/opt/airflow/keys/gcp_credentials.json:ro
       - ./airflow/dags/dbt/logs:/usr/app/dbt/logs
     command: ["airflow", "scheduler"]

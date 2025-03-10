@@ -65,8 +65,6 @@ selected_borough = st.sidebar.selectbox("Select Borough", borough_options)
 severity_options = ["All"] + sorted(filter_data["accident_severity"].dropna().unique())
 selected_severity = st.sidebar.selectbox("Select Severity", severity_options)
 
-
-
 # ✅ Apply Filters to Queries
 filters = []
 if selected_year != "All Years":
@@ -76,10 +74,8 @@ if selected_borough != "All":
 if selected_severity != "All":
     filters.append(f"accident_severity = '{selected_severity}'")
 
-
 # ✅ Combine Filters into a WHERE Clause
 where_clause = "WHERE " + " AND ".join(filters) if filters else ""
-
 
 # Display monthly trends
 df_monthly_trends = get_monthly_trends(where_clause)
@@ -117,7 +113,6 @@ if selected_borough == "All":
     else:
         st.warning("No accident data available for selected filters.")
 
-
 # ✅ Fetch filtered data
 df_severity = get_severity_breakdown(where_clause)
 df_transport = get_transport_mode_distribution(where_clause)
@@ -142,7 +137,6 @@ with col1:
         st.plotly_chart(fig_severity, use_container_width=True)
     else:
         st.warning("No severity data available.")
-
 
 with col2:
     # ✅ Fetch Weather-Based Accident Data
@@ -181,7 +175,6 @@ if not df_weather_severity.empty:
     st.plotly_chart(fig_weather_severity, use_container_width=True)
 else:
     st.warning("No weather severity data available.")
-
 
 # ✅ Display Top 10 Accident-Prone Streets
 st.subheader(" Top 10 Accident-Prone Streets")
