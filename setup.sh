@@ -141,6 +141,7 @@ if [ "$BILLING_STATUS" != "True" ]; then
   echo "   1️⃣ Go to the Billing Console: https://console.cloud.google.com/billing"
   echo "   2️⃣ Select or link a billing account to your project: $GCP_PROJECT_ID"
   echo "   3️⃣ Once billing is activated, re-run this script."
+  echo " ./setup.sh"
 
   exit 1
 fi
