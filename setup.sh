@@ -3,20 +3,12 @@ clear
 
 echo "🚀 Starting Automated ETL Setup!"
 
-# 1️⃣ Clone the Project Repository
-WORKDIR="/app"
-
-echo "🔹 Cloning the project from GitHub..."
-rm -rf $WORKDIR/*  # Ensure clean state
-git clone https://github.com/yourusername/yourproject.git $WORKDIR || { echo "❌ Failed to clone repository! Exiting..."; exit 1; }
-
-cd $WORKDIR || { echo "❌ Failed to enter the project directory! Exiting..."; exit 1; }
-
-echo "✅ Repository cloned successfully."
+# 1️⃣ Ensure we're in the correct directory
+WORKDIR="/app/tfl-accidents"
+cd $WORKDIR || { echo "❌ Failed to enter project directory! Exiting..."; exit 1; }
 
 # 2️⃣ Create & Write Environment Variables Dynamically
 echo "🔹 Creating .env file..."
-
 rm -f .env  # Remove existing .env
 
 cat > .env <<EOL
@@ -154,24 +146,4 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
 done
 
 if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
-    echo "⚠️ DAG did not complete within the expected time. Please check Airflow manually."
-fi
-
-# 🔟 Wait for Streamlit Dashboard
-echo "🔹 Waiting for the Streamlit Dashboard to start..."
-DASHBOARD_PORT=8501
-RETRIES=20
-
-for i in $(seq 1 $RETRIES); do
-    if curl --silent --fail "http://localhost:$DASHBOARD_PORT" > /dev/null; then
-        echo "✅ Streamlit Dashboard is now available!"
-        break
-    else
-        echo "⏳ Streamlit Dashboard is still starting... Retrying in 10 seconds."
-        sleep 10
-    fi
-done
-
-# 🔟 Final Message
-echo "✅ Setup Complete!"
-echo "📊 Streamlit Dashboard is now available at: http://localhost:$DASHBOARD_PORT"
+    echo "⚠️ DAG did not complete
