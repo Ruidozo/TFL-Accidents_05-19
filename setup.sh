@@ -1,13 +1,18 @@
 #!/bin/bash
-
 clear
 
-# Set trap to catch errors
-trap 'handle_error' ERR
+echo "🚀 Starting Automated ETL Setup!"
 
-# 1️⃣ Greeting
-echo "🚀 Welcome to the Automated ETL Setup!"
-echo "This script will set up your environment, deploy the infrastructure, and run your ETL pipeline."
+# 1️⃣ Clone the Project Repository
+WORKDIR="/app"
+
+echo "🔹 Cloning the project from GitHub..."
+rm -rf $WORKDIR/*  # Ensure clean state
+git clone https://github.com/yourusername/yourproject.git $WORKDIR || { echo "❌ Failed to clone repository! Exiting..."; exit 1; }
+
+cd $WORKDIR || { echo "❌ Failed to enter the project directory! Exiting..."; exit 1; }
+
+echo "✅ Repository cloned successfully."
 
 # 2️⃣ Create & Write Environment Variables Dynamically
 echo "🔹 Creating .env file..."
@@ -50,7 +55,6 @@ mkdir -p secrets
 echo "🔹 Please log in to your GCP account..."
 gcloud auth login || { echo "❌ GCP login failed! Exiting..."; exit 1; }
 
-# Get GCP project
 GCP_PROJECT_ID=$(gcloud config get-value project)
 echo "🔹 Using GCP project: $GCP_PROJECT_ID"
 echo "GCP_PROJECT_ID=$GCP_PROJECT_ID" >> .env
@@ -82,7 +86,7 @@ else
     echo "✅ Service account already exists."
 fi
 
-# Store key path in .env
+# Store credentials path in .env
 echo "GOOGLE_APPLICATION_CREDENTIALS=$KEY_FILE_PATH" >> .env
 
 echo "✅ GCP authentication complete."
@@ -96,12 +100,14 @@ terraform apply -var="project_id=$GCP_PROJECT_ID" -auto-approve
 
 # Get the created bucket name
 DATALAKE_BUCKET_NAME="${GCP_PROJECT_ID}-datalake"
+
+# Store bucket name in .env
 echo "GCS_BUCKET=$DATALAKE_BUCKET_NAME" >> ../.env
 cd ..
 
 echo "✅ Infrastructure setup complete."
 
-# 6️⃣ Start Docker Services
+# 6️⃣ Start Docker & Airflow
 echo "🔹 Starting Docker services..."
 docker-compose up --build -d
 
@@ -109,15 +115,17 @@ docker-compose up --build -d
 echo "⏳ Waiting for Airflow to initialize..."
 sleep 20  # Adjust if needed
 
-# 8️⃣ Trigger DAG and Monitor Progress
+# 8️⃣ Trigger DAG
 DAG_ID="end_to_end_pipeline"
+
 echo "🔹 Unpausing and triggering DAG: $DAG_ID..."
 docker exec -it airflow-webserver airflow dags unpause $DAG_ID
 docker exec -it airflow-webserver airflow dags trigger $DAG_ID
 
-echo "🔍 Monitoring DAG execution..."
+# 9️⃣ Monitor DAG Status
+echo "🔍 Checking DAG status..."
 
-MAX_RETRIES=50
+MAX_RETRIES=50  # Increase retries because DAG takes time
 RETRY_COUNT=0
 
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
@@ -149,7 +157,7 @@ if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
     echo "⚠️ DAG did not complete within the expected time. Please check Airflow manually."
 fi
 
-# 9️⃣ Wait for Streamlit Dashboard
+# 🔟 Wait for Streamlit Dashboard
 echo "🔹 Waiting for the Streamlit Dashboard to start..."
 DASHBOARD_PORT=8501
 RETRIES=20
@@ -164,12 +172,6 @@ for i in $(seq 1 $RETRIES); do
     fi
 done
 
-# 🔟 Display URLs
-AIRFLOW_DASHBOARD_URL="http://localhost:8082"
-STREAMLIT_DASHBOARD_URL="http://localhost:$DASHBOARD_PORT"
-
-sed -i "s|AIRFLOW_DASHBOARD_URL=.*|AIRFLOW_DASHBOARD_URL=$AIRFLOW_DASHBOARD_URL|g" .env
-
+# 🔟 Final Message
 echo "✅ Setup Complete!"
-echo "📊 Airflow Dashboard: $AIRFLOW_DASHBOARD_URL"
-echo "📊 Streamlit Dashboard: $STREAMLIT_DASHBOARD_URL"
+echo "📊 Streamlit Dashboard is now available at: http://localhost:$DASHBOARD_PORT"
