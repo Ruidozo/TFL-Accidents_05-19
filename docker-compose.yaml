@@ -29,7 +29,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_db_data:/var/lib/postgresql/data
-      - ./db_init.sh:/docker-entrypoint-initdb.d/db_init.sh
+      - ./init-scripts/db_init.sh:/docker-entrypoint-initdb.d/db_init.sh
       - airflow_env:/usr/app/.env  # ✅ Ensures .env works
 
   # Airflow Webserver
@@ -104,6 +104,5 @@ volumes:
   postgres_db_data:
   airflow_logs:
   airflow_plugins:
-  airflow_dags:
   airflow_env:
   secrets:

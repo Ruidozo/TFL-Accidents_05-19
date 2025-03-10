@@ -317,22 +317,32 @@ echo "✅ Infrastructure setup complete."
 echo "🔹 Ensuring .env exists before running Docker Compose..."
 if [ ! -f .env ]; then
     echo "⚠️ .env file not found on the host. Creating a default version..."
-    cp /app/tfl-accidents/.env /usr/app/.env
+    cp /app/tfl-accidents/.env ./.env || { echo "❌ Failed to create .env file! Exiting..."; exit 1; }
 fi
 
 echo "🔹 Ensuring DAGs folder exists before running Docker Compose..."
 
-# Check if the DAGs folder exists
-if [ ! -d /opt/airflow/dags ]; then
-    echo "⚠️ DAGs folder not found in /opt/airflow/dags. Creating it..."
-    mkdir -p /opt/airflow/dags || { echo "❌ Failed to create DAGs folder! Exiting..."; exit 1; }
+# Define DAGs folder path
+DAGS_HOST_PATH="./airflow/dags"
+DAGS_CONTAINER_PATH="/opt/airflow/dags"
 
+# Check if the DAGs folder exists **on the host**
+if [ ! -d "$DAGS_HOST_PATH" ]; then
+    echo "⚠️ DAGs folder not found locally! Creating..."
+    mkdir -p "$DAGS_HOST_PATH" || { echo "❌ Failed to create DAGs folder! Exiting..."; exit 1; }
+    
     echo "🔹 Copying DAGs from the container version..."
-    cp -r /app/tfl-accidents/airflow/dags/* /opt/airflow/dags/ || { echo "❌ Failed to copy DAGs! Exiting..."; exit 1; }
+    if [ -d "/app/tfl-accidents/airflow/dags" ]; then
+        cp -r /app/tfl-accidents/airflow/dags/* "$DAGS_HOST_PATH"/ || { echo "❌ Failed to copy DAGs! Exiting..."; exit 1; }
+    else
+        echo "⚠️ No DAGs found inside the container source. Skipping copy."
+    fi
 else
-    echo "✅ DAGs folder already exists."
+    echo "✅ DAGs folder already exists on the host."
 fi
 
+# Ensure the correct permissions
+chmod -R 755 "$DAGS_HOST_PATH"
 
 
 # 6️⃣ Start Docker & Airflow
