@@ -49,7 +49,7 @@ services:
     ports:
       - "8082:8080"
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
       - ./airflow/dags/dbt:/usr/app/dbt  
@@ -73,7 +73,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/keys/gcp_credentials.json
       LOCAL_STORAGE: /opt/airflow/processed_data/raw/csv
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
+      - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
       - ./airflow/dags/dbt:/usr/app/dbt  
@@ -106,3 +106,4 @@ volumes:
   airflow_plugins:
   airflow_env:
   secrets:
+  airflow_dags:
