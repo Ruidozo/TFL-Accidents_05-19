@@ -5,7 +5,7 @@ clear
 echo "🚀 Initializing the TFL Accidents ETL Setup..."
 
 # Define repository details
-REPO_URL="https://github.com/ruidozo/tfl-accidents.git"
+REPO_URL="https://github.com/Ruidozo/TFL-Accidents_05-19.git"
 CLONE_DIR="/app/tfl-accidents"
 
 # Ensure /app is clean
