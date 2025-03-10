@@ -141,8 +141,6 @@ if [ "$BILLING_STATUS" != "True" ]; then
   echo "   1️⃣ Go to the Billing Console: https://console.cloud.google.com/billing"
   echo "   2️⃣ Select or link a billing account to your project: $GCP_PROJECT_ID"
   echo "   3️⃣ Once billing is activated, re-run this script."
-  echo " ./setup.sh"
-
   exit 1
 fi
 
@@ -235,30 +233,23 @@ if [ -z "$NEW_SA" ]; then
 fi
 
 # 6.2 Assign **ALL** IAM Roles to the Storage Admin Service Account
-echo "🔹 Assigning **FULL** IAM permissions to the Storage Admin service account..."
-FULL_ROLES=(
-    "roles/owner"                  # Full control over the project
-    "roles/editor"                 # Edit permissions for all resources
-    "roles/storage.admin"          # Full control over Cloud Storage
-    "roles/storage.objectAdmin"    # Full control over objects in Cloud Storage
-    "roles/storage.objectCreator"  # Allows object creation (uploads)
-    "roles/storage.objectViewer"   # Allows viewing objects
-    "roles/storage.objectUser"     # Grants object-level permissions
-    "roles/bigquery.admin"         # Full control over BigQuery
-    "roles/iam.serviceAccountAdmin" # Allows full control over service accounts
-    "roles/iam.roleAdmin"          # Allows managing IAM roles
-    "roles/logging.admin"          # Full control over logs
-    "roles/cloudsql.admin"         # Full control over Cloud SQL
-    "roles/dataproc.admin"         # Full control over Dataproc
-    "roles/pubsub.admin"           # Full control over Pub/Sub
-    "roles/compute.admin"          # Full control over Compute Engine
+echo "🔹 Assigning required IAM roles to the Service Account..."
+REQUIRED_ROLES=(
+    "roles/storage.admin"
+    "roles/iam.serviceAccountAdmin"
+    "roles/iam.serviceAccountKeyAdmin"
+    "roles/serviceusage.serviceUsageAdmin"
+    "roles/resourcemanager.projectIamAdmin"
+    "roles/logging.viewer"
+    "roles/billing.viewer"
 )
 
-for role in "${FULL_ROLES[@]}"; do
+for role in "${REQUIRED_ROLES[@]}"; do
     gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
         --member="serviceAccount:$STORAGE_ADMIN_EMAIL" \
         --role="$role"
 done
+
 
 echo "✅ IAM permissions successfully assigned!"
 
@@ -322,6 +313,19 @@ echo "GCS_BUCKET=$DATALAKE_BUCKET_NAME" >> ../.env
 cd ..
 
 echo "✅ Infrastructure setup complete."
+
+echo "🔹 Ensuring .env exists before running Docker Compose..."
+if [ ! -f .env ]; then
+    echo "⚠️ .env file not found on the host. Creating a default version..."
+    cp /app/tfl-accidents/.env /usr/app/.env
+fi
+
+echo "🔹 Ensuring DAGs folder exists before running Docker Compose..."
+if [ ! -d /opt/airflow/dags ]; then
+    echo "⚠️ DAGs folder not found on the host. Using container version..."
+    cp -r /app/tfl-accidents/airflow/dags /opt/airflow/dags
+fi
+
 
 # 6️⃣ Start Docker & Airflow
 echo "🔹 Starting Docker services..."
