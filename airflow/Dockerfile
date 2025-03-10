@@ -34,7 +34,6 @@ RUN mkdir -p /usr/app/dbt/logs && \
 USER airflow
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
-RUN pip install --user kaggle
 
 # Switch to airflow user and install Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable

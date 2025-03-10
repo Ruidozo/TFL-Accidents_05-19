@@ -1,19 +1,19 @@
 #!/bin/bash
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit on error
 
 clear
-echo "🚀 Initializing the TFL Accidents ETL Setup..."
+echo "🚀 Initializing the TFL Accidents ETL Setup Inside Debian-Host..."
 
-# Define repository details
+# Define repo details
 REPO_URL="https://github.com/Ruidozo/TFL-Accidents_05-19.git"
 CLONE_DIR="/app/tfl-accidents"
 
-# Check if the repo already exists
+# Ensure the repository is always up to date
 if [ -d "$CLONE_DIR/.git" ]; then
     echo "🔹 Repository already exists. Pulling the latest changes..."
     cd "$CLONE_DIR"
     git reset --hard
-    git pull origin main || { echo "❌ Failed to pull the latest changes! Exiting..."; exit 1; }
+    git pull origin main || { echo "❌ Failed to pull latest changes! Exiting..."; exit 1; }
 else
     echo "🔹 Cloning the repository for the first time..."
     rm -rf "$CLONE_DIR"
@@ -31,4 +31,12 @@ chmod +x setup.sh
 echo "🔹 Running setup.sh..."
 ./setup.sh || { echo "❌ Setup script failed! Exiting..."; exit 1; }
 
-echo "✅ Container setup complete!"
+echo "✅ Setup complete!"
+
+# Start Airflow & Dashboard inside Debian-Host
+echo "🔹 Starting Airflow and Streamlit inside Debian-Host..."
+docker-compose up --build -d
+
+echo "✅ Services started successfully! You can now access:"
+echo "📊 Airflow UI: http://localhost:8082"
+echo "📊 Streamlit Dashboard: http://localhost:8501"

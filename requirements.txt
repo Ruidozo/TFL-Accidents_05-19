@@ -4,7 +4,6 @@ pyyaml
 requests
 pandas
 apache-airflow-providers-google
-apache-airflow-providers-amazon
 apache-airflow-providers-postgres
 dbt-core
 dbt-postgres
