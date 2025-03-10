@@ -1,5 +1,4 @@
 #!/bin/bash
-clear
 
 echo "🚀 Starting Automated ETL Setup!"
 
@@ -42,41 +41,6 @@ echo "✅ .env file created successfully."
 
 # Create secrets folder for storing credentials
 mkdir -p secrets
-
-# 3️⃣ Install Google Cloud SDK, Docker, Docker Compose, and Terraform
-echo "🔹 Installing dependencies..."
-
-# Install Google Cloud SDK if not installed
-if ! command -v gcloud &> /dev/null; then
-  echo "🔸 Installing Google Cloud SDK..."
-  curl -sSL https://sdk.cloud.google.com | bash
-  exec -l $SHELL
-  gcloud components install gke-gcloud-auth-plugin --quiet
-fi
-
-# Install Docker if not installed
-if ! command -v docker &> /dev/null; then
-  echo "🔸 Installing Docker..."
-  sudo apt update -y && sudo apt install -y docker.io
-  sudo systemctl enable --now docker
-fi
-
-# Install Docker Compose if not installed
-if ! command -v docker-compose &> /dev/null; then
-  echo "🔸 Installing Docker Compose..."
-  sudo apt install -y docker-compose
-fi
-
-# Install Terraform if not installed
-if ! command -v terraform &> /dev/null; then
-  echo "🔸 Installing Terraform..."
-  sudo apt install -y unzip
-  TERRAFORM_VERSION=$(curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | grep "tag_name" | cut -d: -f2 | tr -d ',"v')
-  wget https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/terraform_"$TERRAFORM_VERSION"_linux_amd64.zip
-  unzip terraform_"$TERRAFORM_VERSION"_linux_amd64.zip
-  sudo mv terraform /usr/local/bin/
-  rm terraform_"$TERRAFORM_VERSION"_linux_amd64.zip
-fi
 
 # 4️⃣ Ask User to Authenticate with Google Cloud
 echo "🔹 Please log in to your GCP account..."
