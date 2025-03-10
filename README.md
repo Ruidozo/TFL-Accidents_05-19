@@ -20,6 +20,8 @@ The project utilizes the following technologies:
 - **Dashboard & Visualization:** Streamlit (deployed on Cloud Run)
 - **Containerization:** Docker (to package and deploy the solution efficiently)
 
+![diagram](image.png)
+
 ## Architecture Overview
 The data pipeline follows this flow:
 
